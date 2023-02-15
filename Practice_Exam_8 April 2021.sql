@@ -68,3 +68,65 @@ UPDATE Reports SET CloseDate = GETDATE() WHERE CloseDate IS NULL
 --DELETE Reports WHERE StatusId = 4
 
 SELECT [Description], FORMAT(OpenDate, 'dd-MM-yyyy') FROM Reports WHERE EmployeeId IS NULL ORDER BY OpenDate ASC
+
+SELECT r.[Description], c.[Name] FROM Reports AS r
+JOIN Categories AS c ON r.CategoryId = c.Id
+WHERE r.CategoryId IS NOT NULL
+ORDER BY r.[Description] ASC, c.[Name] ASC
+
+select top 5 c.[Name] as CategoryName, count(r.CategoryId) as ReportsNumber from Reports as r
+join Categories as c on r.CategoryId = c.Id
+group by r.CategoryId, c.Name
+order by ReportsNumber desc, c.Name asc 
+
+select u.Username, c.[Name] as CategoryName from Reports as r
+join Users as u on r.UserId = u.Id
+join Categories as c on r.CategoryId = c.Id
+where datepart(month, r.OpenDate) = datepart(month, u.Birthdate) and datepart(day, r.OpenDate) = datepart(day, u.Birthdate)
+order by u.Username asc, c.Name asc
+
+select concat(e.FirstName, ' ', e.LastName) as FullName, COUNT(r.UserId) as UsersCount from Employees as e 
+left join Reports as r on r.EmployeeId = e.Id
+left join Users as u on r.EmployeeId = u.Id
+group by concat(e.FirstName, ' ', e.LastName)
+order by UsersCount desc, FullName asc
+
+select 
+CASE WHEN CONCAT(e.FirstName,' ',e.LastName) IS NOT NULL
+THEN CONCAT(e.FirstName,' ',e.LastName)
+ELSE
+'None'
+END as Employee, 
+ISNULL(d.Name, 'none') as Department, 
+ISNULL(c.Name, 'none') as Category, 
+ISNULL(r.[Description], 'none'), 
+ISNULL(format(r.OpenDate, 'dd.MM.yyyy'), 'none'), 
+ISNULL(st.[Label], 'none') as [Status], 
+ISNULL(u.Name, 'none') as [User]
+from Reports as r
+left join Employees as e on r.EmployeeId = e.Id
+left join Departments as d on d.Id = e.DepartmentId
+left join Categories as c on r.CategoryId = c.Id
+left join [Status] as st on r.StatusId = st.Id
+left join Users as u on r.UserId = u.Id
+order by e.FirstName desc, e.LastName desc, Department asc, Category asc, [Description] asc, r.OpenDate asc, [Status] asc, [User] asc
+
+go
+
+create function udf_HoursToComplete(@StartDate DATETIME, @EndDate DATETIME)
+returns int
+as
+begin
+	declare @result int = DATEDIFF(HOUR, @StartDate, @EndDate)
+
+	IF @result IS NULL
+	BEGIN
+	RETURN 0
+	END
+
+	RETURN @result
+end
+
+go
+SELECT dbo.udf_HoursToComplete(OpenDate, CloseDate) AS TotalHours FROM Reports
+go
