@@ -1,0 +1,1 @@
+SELECT SUBSTRING('Please ensure the door is locked!', PATINDEX('%[^ 0-9A-Za-z]%', 'Please ensure the door is locked!'), 1) as [Sign];
